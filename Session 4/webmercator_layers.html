@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Layer Management - Sukabumi GIS</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    h3 { margin: 10px; text-align: center; }
+    #map { height: 550px; width: 100%; }
+  </style>
+</head>
+<body>
+  <h3>Layer Management (Base Maps, Overlays, Controls) - Sukabumi</h3>
+  <div id="map"></div>
+
+  <script>
+    // === 1️⃣ Inisialisasi Peta ===
+    var map = L.map('map').setView([-6.921, 106.931], 10);
+
+    // === 2️⃣ Base Maps ===
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    });
+
+    var satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri Satellite'
+    });
+
+    osm.addTo(map);
+
+    // === 3️⃣ Overlays ===
+
+    // Marker - Flood Sensor
+    var floodIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/727/727790.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
+    });
+
+    var floodMarker = L.marker([-6.921, 106.931], { icon: floodIcon })
+      .bindPopup("<b>Flood Sensor - Cikole</b><br>Coordinates: -6.921, 106.931");
+
+    // Polyline - Evacuation Route
+    var routeCoords = [
+      [-6.921, 106.931],
+      [-6.923, 106.934],
+      [-6.925, 106.938],
+      [-6.927, 106.940]
+    ];
+    var evacuationRoute = L.polyline(routeCoords, {
+      color: 'blue',
+      weight: 4
+    }).bindPopup("<b>Evacuation Route</b><br>Main path to safe area.");
+
+    // === Polygon - Sukabumi Boundary (from local GeoJSON) ===
+    var sukabumiBoundary = L.layerGroup(); // kosong dulu
+
+    fetch("sukabumi.geojson")
+      .then(res => res.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: {
+            color: "green",
+            weight: 2,
+            fillOpacity: 0.2
+          }
+        }).bindPopup("Kabupaten Sukabumi Boundary").addTo(sukabumiBoundary);
+
+        // Tambahkan layer ke peta
+        sukabumiBoundary.addTo(map);
+        });
+
+    // GeoJSON tambahan
+    var geojsonData = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": { "name": "GeoJSON - Flood Sensor" },
+          "geometry": { "type": "Point", "coordinates": [106.935, -6.924] }
+        }
+      ]
+    };
+    var geojsonLayer = L.geoJSON(geojsonData).bindPopup("GeoJSON Flood Sensor");
+
+    // === 4️⃣ Layer Control ===
+    var baseMaps = {
+      "OpenStreetMap": osm,
+      "Satellite": satellite
+    };
+
+    var overlays = {
+      "Flood Sensor (Marker)": floodMarker,
+      "Evacuation Route (Polyline)": evacuationRoute,
+      "District Boundary (Sukabumi)": sukabumiBoundary,
+      "GeoJSON Data": geojsonLayer
+    };
+
+    L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
+
+    // === 5️⃣ Tambahkan Overlay Default ===
+    floodMarker.addTo(map);
+    evacuationRoute.addTo(map);
+    geojsonLayer.addTo(map);
+    sukabumiBoundary.addTo(map);
+
+  </script>
+</body>
+</html>
